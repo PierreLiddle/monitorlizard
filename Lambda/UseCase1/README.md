@@ -1,16 +1,67 @@
-# Monitor Lizard Use Case “User activity anomaly”
+#Use Case “User activity anomaly”
 
 ## Introduction
 
-Find activities that haven’t been performed by a particular user, IP or accessKey in the last n minutes or for the first time.
+Find activities that haven’t been performed by a particular user, IP or accessKey in the last n minutes or for the first time {at least n times}
 
-Example 1:
+**Example 1:**
 Find EC2 create events performed from a “new” IAM access key. 
 Autoscale user creates EC2 instances all the time. A malicious user does it for the first time.
-Example 2: 
-New IAM users performed S3 create events the first time in n minutes 
-Example 3:
-User performing DynamoDB activities within production account
+
+**Example 2:** 
+New IAM users performed S3 create bucket event for the first time in n minutes 
+
+**Example 3:**
+New user performing DynamoDB activities within production account
+
+**Example 4:**
+More than 3 user signin failures within 5 minutes
+
+
+
+## Rule query logic
+The query of each rule is defined in the Lucene query language that used in the Kibana Dev-Tools **excluding** the first line `GET cloudtrail*/_search` 
+
+The following example query searches for all users that performed EC2 _AuthorizeSecurityGroupIngress_ events in a particular account. For test purposes, the date range filter term is still part of this query but is changed (or added) dynamically during every rule execution to greater than {NOW - AlertPeriodMinutes}.
+
+The query should be performed manually in Kibana-Dev tools for test purposes to test the query logic.  
+
+```
+GET cloudtrail*/_search     <<< remove when defining rule query in DynamoDB !!!
+{
+    "query": {
+    "bool": {
+      "filter": [
+        {"term": {"eventName.keyword":"AuthorizeSecurityGroupIngress"}},
+        {"term": {"eventSource.keyword":"ec2.amazonaws.com"}},
+        {"term": {"recipientAccountId.keyword":"861828696892"}},
+        
+        { "range": { "eventTime": { "gte": "2020-07-25T08:00:00.000Z" }}}
+      ] 
+    }
+  },
+  "size":0,
+  
+  "aggs": {
+    "my_count": {
+      "terms": {
+        "field": "userIdentity.sessionContext.sessionIssuer.arn.keyword"
+          }
+        }
+    }
+}
+```
+
+## Rule alert logic
+
+New users launching EC2 instance (AlertPeriodInMinutes=3600, AlertMinimumEventCount=1)
+> Alert by user on every EC2 launch event if the user hasn't performed this event in the last 60 hours 
+
+New users creating S3 bucket (AlertPeriodInMinutes=3600, AlertMinimumEventCount=1)
+> Alert by user on every create bucket event if the user hasn't performed this event in the last 60 hours 
+
+Failed user authentication (AlertPeriodInMinutes=5, AlertMinimumEventCount=3)
+> Alert by user if the query found more than 3 failed user logins within the last 5 minutes
 
 
 
@@ -27,7 +78,7 @@ Alert window: 3600 minutes
 
 ## Example #1 
 
-Find new accessKeys that performed S3 create events
+Find new IAM users that performed EC2 RunInstances event in the main account (started instance)
 
 Query (executed in Kibana Dev-Tools )
 
@@ -45,12 +96,13 @@ GET cloudtrail*/_search
       "must": [
         {
           "wildcard": {
-            "eventName.keyword": "Create*"
+            "eventName.keyword": "RunInstances"
           }
         }
       ],
+      
       "filter": [
-        {"term": {"eventSource.keyword":"s3.amazonaws.com"}},
+        {"term": {"eventSource.keyword":"ec2.amazonaws.com"}},
         {"term": {"recipientAccountId.keyword":"861828696892"}},
         { "range": { "eventTime": { "gte": "2020-07-25T08:00:00.000Z" }}}
       ] 
@@ -67,7 +119,7 @@ GET cloudtrail*/_search
 }
 ```
 
-Result found two IAM users that performed S3 create events since the given eventTime
+Result found two IAM users that performed EC2 launch events since the given eventTime
 
 ```
 ...
@@ -92,17 +144,18 @@ Example DynamoDB Test Rule
 
 ```
 {
-  "RuleId": "Test",
+  "RuleId": "New users launching EC2 instance",
   "RuleType": "User activity anomaly",
   "RunScheduleInMinutes": 60,
   "AlertPeriodMinutes": 3600,
-  "AlertText": "New or infrequent use of IAM access keys in production account 87654321:\nThe following IAM access keys where used for S3 create events for the first time within the alert window. ",
-  "Description": "Search for all accessKeys who performed S3 create events in the last n minutes (IntervallMinutes). Alert if accessKey hasn't been used for this operation within the last n hours (AlertPeriodMinutes). Search in index for 'userIdentity.accessKeyId', eventSource=s3.amazonaws.com, eventName=Create*",
+  "AlertMinimumEventCount": 1,
+  "AlertText": "New or infrequent launch EC2 instance event by user in production account:\nThe following IAM users where used for EC2 launch events for the first time within the alert window. ",
+  "Description": "Search for all userIdentity.arn who performed EC2 create events in the last n minutes (IntervallMinutes). Alert if accessKey hasn't been used for this operation within the last n hours (AlertPeriodMinutes).",
   "LastAggResult": {
     "AKIA4RKH6JM6CBCA3X5U": 1595122200,
     "ASIA4RKH6JM6KFARZXXX": 1595122200
   },
-  "Query": "{\n    \"query\": {\n    \"bool\": {\n\n      \"must_not\": [\n        {\n          \"match\": {\n            \"userIdentity.type\": \"AWSService\"\n          }\n        }\n      ],\n      \n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"Create*\"\n          }\n        }\n      ],\n      \n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"s3.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        \n        { \"range\": { \"eventTime\": { \"gte\": \"2020-05-01T00:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.accessKeyId.keyword\",\n        \"order\": { \"_count\": \"desc\" },\n        \"size\":5\n          }\n        }\n    }\n}",
+  "Query": "{\n    \"query\": {\n    \"bool\": {\n\n      \"must_not\": [\n        {\n          \"match\": {\n            \"userIdentity.type\": \"AWSService\"\n          }\n        }\n      ],\n      \n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"RunInstances*\"\n          }\n        }\n      ],\n      \n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"ec2.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        \n        { \"range\": { \"eventTime\": { \"gte\": \"2020-05-01T00:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.accessKeyId.keyword\",\n        \"order\": { \"_count\": \"desc\" },\n        \"size\":5\n          }\n        }\n    }\n}",
   "ES_Index": "cloudtrail*"
 }
 ```
@@ -111,8 +164,7 @@ Example DynamoDB Test Rule
 
 ## Example #2:
 
-Find new IAM access keys, that performed any DynamoDB activity (except keys starting with ASIA*)
-
+Find IAM users that created a new S3 bucket in the main account
 Query (executed in Kibana Dev-Tools )
 
 NOTE: 
@@ -121,14 +173,97 @@ NOTE:
 * filter-range-eventTime will be replaced (or added) by the current time minus the alert window range at each execution
 
 ```
-GET cloudtrail-2020-07-21/_search
+GET cloudtrail*/_search
 {
     "query": {
     "bool": {
-      "must_not": [{"wildcard":{"userIdentity.accessKeyId.keyword":"ASIA*"}}],
+      "must": [
+        {
+          "wildcard": {
+            "eventName.keyword": "CreateBucket"
+          }
+        }
+      ],
+      
       "filter": [
-        {"term": {"eventSource.keyword":"dynamodb.amazonaws.com"}},
-        {"term": {"recipientAccountId.keyword":"051687089423"}},
+        {"term": {"eventSource.keyword":"s3.amazonaws.com"}},
+        {"term": {"recipientAccountId.keyword":"861828696892"}},
+        { "range": { "eventTime": { "gte": "2020-07-25T08:00:00.000Z" }}}
+      ] 
+    }
+  },
+  "size":0,
+  "aggs": {
+    "my_count": {
+      "terms": {
+        "field": "userIdentity.arn.keyword"
+          }
+        }
+    }
+}
+```
+
+### Example DynamoDB Test Rule
+```
+{
+  "AlertPeriodMinutes": 3600,
+  "AlertMinimumEventCount": 1,
+  "AlertText": "New user created bucket in production account 12345678:\nThe following IAM access keys where used for S3 create bucket events for the first time within the alert window. ",
+  "Description": "Search for users that performed S3 create bucket events recently. Alert if accessKey hasn't been used for this operation within the last n hours (AlertPeriodMinutes). Search in index for 'userIdentity.accessKeyId', eventSource=s3.amazonaws.com, eventName=Create*",
+  "ES_Index": "cloudtrail*",
+  "LastAggResult": {
+    "AKIA4RKH6JM6CBCA3X5U": 1595122200,
+    "ASIA4RKH6JM6KFARZXXX": 1595122200
+  },
+  "LastRun": 1595858028,
+  "Query": "{
+    "query": {
+    "bool": {
+      "must": [
+        {
+          "wildcard": {
+            "eventName.keyword": "CreateBucket"
+          }
+        }
+      ],
+      
+      "filter": [
+        {"term": {"eventSource.keyword":"s3.amazonaws.com"}},
+        {"term": {"recipientAccountId.keyword":"861828696892"}},
+        { "range": { "eventTime": { "gte": "2020-07-25T08:00:00.000Z" }}}
+      ] 
+    }
+  },
+  "size":0,
+  "aggs": {
+    "my_count": {
+      "terms": {
+        "field": "userIdentity.arn.keyword"
+          }
+        }
+    }
+}",
+  "RuleId": "New user created S3 bucket",
+  "RuleType": "User activity anomaly",
+  "RunScheduleInMinutes": 60
+}
+```
+
+
+## Example #4
+
+User creates more then n failed signin events in n minutes
+Failure can be either responseElements = {"ConsoleLogin": "Failure"} or responseElements = {"SwitchRole": "Failure"}
+
+```
+GET cloudtrail-2020-07-27/_search
+{
+    "query": {
+    "bool": {
+      "must": [{"wildcard":{"responseElements.keyword":"*Failure*"}}],
+      "filter": [
+        {"term": {"eventSource.keyword":"signin.amazonaws.com"}},
+        {"term": {"recipientAccountId.keyword":"987654321"}},
         { "range": { "eventTime": { "gte": "2020-07-20T08:00:00.000Z" }}}
       ] 
     }
@@ -137,7 +272,7 @@ GET cloudtrail-2020-07-21/_search
   "aggs": {
     "my_count": {
       "terms": {
-        "field": "userIdentity.accessKeyId.keyword"
+        "field": "userIdentity.userName.keyword"
           }
         }
     }
@@ -145,4 +280,22 @@ GET cloudtrail-2020-07-21/_search
 ```
 
 
-
+### Example DynamoDB Test Rule
+```
+{
+  "AlertMinimumEventCount": 3,
+  "AlertPeriodMinutes": 5,
+  "AlertText": "User reached signin failure threshold in account 12345678:\nThe following users caused more than 3 login failures within 5 minutes. ",
+  "Description": "Search for users that created signin.amazonaws.com events matching responseElements = {'ConsoleLogin': 'Failure'} or responseElements = {'SwitchRole': 'Failure'} ",
+  "ES_Index": "cloudtrail*",
+  "LastAggResult": {
+    "AKIA4RKH6JM6CBCA3X5U": 1595122200,
+    "ASIA4RKH6JM6KFARZXXX": 1595122200
+  },
+  "LastRun": 1595858028,
+  "Query": "{\n    \"query\": {\n    \"bool\": {\n      \"must\": [{\"wildcard\":{\"responseElements.keyword\":\"*Failure*\"}}],\n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"signin.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"987654321\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-20T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.userName.keyword\"\n          }\n        }\n    }\n}",
+  "RuleId": "Failed user authentication",
+  "RuleType": "User activity anomaly",
+  "RunScheduleInMinutes": 60
+}
+```

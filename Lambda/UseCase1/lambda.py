@@ -1,3 +1,32 @@
+#
+# Monitor Lizard - Rule1
+# Use Case “User activity anomaly”
+#
+# Version: 28072020
+#
+# Description: 
+#   Event detection for AWS events in Elasticsearch.
+#   Example use case: Alert on new users that created a S3 bucket in production account
+#
+# Author:
+#   Volker Rath, awsvolks@amazon.com
+#
+# Date:
+#   July 2020
+#
+# Required Environment Variables:
+#   Key : Value
+#   DynamoDB    : SIEM
+#   ES_AUTH_TYPE    : esl
+#   ES_ENDPOINT : es-endpoint-7fy3xguvkfnhczlw3yxqui.us-east-2.es.amazonaws.com
+#   ES_LOGIN_ONLY_FOR_ESL_AUTHTYPE  : username
+#   ES_LOG_LEVEL    : DEBUG
+#   ES_PWD_ONLY_FOR_ESL_AUTHTYPE    : password
+#   ES_REGION   : us-east-2
+#   SNS_TOPIC_ARN   : arn:aws:sns:us-east-2:987654321:Kibana-Alerts
+#
+
+
 import json
 import os
 import boto3
@@ -362,7 +391,8 @@ def lambda_handler(event, context):
             print( "Skipping SIEM rule: "+Rule["RuleId"] )
     
     
-
+    
+     
 
     
     return {
