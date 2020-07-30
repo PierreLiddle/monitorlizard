@@ -1,12 +1,12 @@
 #
-# Monitor Lizard - Rule1
+# Monitor Lizard - Rule2
+# Use Case “Find single event”
 #
 # Version: 28072020
 #
 # Description: 
 #   Event detection for AWS events in Elasticsearch.
-#   Use Case “User activity anomaly”
-#   Example use case: Alert on new users that created a S3 bucket in production account
+#   Example use case: Alert on IAM user creation (without tag|)
 #
 # Author:
 #   Volker Rath, awsvolks@amazon.com
@@ -34,6 +34,7 @@ import botocore
 import urllib3
 import time
 import requests 
+import re
 from boto3.dynamodb.conditions import Key, Attr
 from Logger import consoleLog
 from datetime import datetime
@@ -46,11 +47,11 @@ from datetime import datetime
 # Globals
 DEBUG = True 
 TEST_SNS = False    # no execution of any rule, just send a sinple test message
-SEND_ALERT = True     # Send or send not SNS alrert message and add document to index MonitorLizardAlerts
-TEST_RULE = ""  # Execute only rule with this rule Id. Ignore LastRun settings
+SEND_SNS = False     # execute rules, but don't send a message
+TEST_RULE = "Create IAM user"  # Execute only rule with this rule Id. Ignore LastRun settings
 TEST_NOUPDATE = True # Don't update LastAggResult in DynamoDB
 TEST_AlertPeriod = 10000  # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool
-TEST_IGNORE_LASTRUN = True # Run regardless of recent execution
+
 
 
 # Read Environment Variables
@@ -149,6 +150,8 @@ def connectES(esEndPoint):
 
 def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
 
+    global DEBUG
+    
     # Read SIEM rule from DynamoDB 
     DBresponse = dynamodb_table.query(
         KeyConditionExpression=Key('RuleId').eq(RuleId)&Key('RuleType').eq(RuleType),
@@ -160,11 +163,10 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
         Rule_LastAggResult = DBresponse["Items"][0]["LastAggResult"]
         Rule_AlertPeriodMinutes = DBresponse["Items"][0]["AlertPeriodMinutes"]
         Rule_AlertText = DBresponse["Items"][0]["AlertText"]
-        Rule_AlertMinimumEventCount = DBresponse["Items"][0]["AlertMinimumEventCount"]
     except Exception as E:
         consoleLog("Error reading some of the database values.","ERROR",esLogLevelGv)
-        return    
-    
+        return
+        
     
     #
     # Remove eventTime range filter and replace with new time filter
@@ -186,107 +188,54 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
     
     
     #
-    # Read Elasticsearch aggregation query
-    #   with newly set time range filter
+    # Run Elasticsearch query
     #
    
     result = esClient.search( index=Rule_ES_Index, body=Rule_Query)    
     hits = result["hits"]["total"]["value"]
-    bucket = result["aggregations"]["my_count"]["buckets"]
     
-    
-    #
-    # Iterate through ElasticSearch aggregation result
-    #
-    
-    # GroupValues_current is an array with all aggregated values (group by) and the unix time from this query
-    CurrentAggResult = {}
+    AlertOccurrences ={}
     QueryTime = int(time.time())
     
-    # Get aggregation values and add current time
-    for customAggName, value in result["aggregations"].items():
-        if isinstance(value, (dict, list)):
-            bucket = result["aggregations"][customAggName]["buckets"]
-            
-            for GroupValue in bucket:
-                if GroupValue["doc_count"] >= Rule_AlertMinimumEventCount: 
-                    consoleLog(GroupValue["key"] + " found at least "+str(Rule_AlertMinimumEventCount)+" times.","DEBUG",esLogLevelGv)
-                    CurrentAggResult[GroupValue["key"]] = QueryTime     # current occurence with current time
-                else:
-                    consoleLog(GroupValue["key"] + " found but did not reach minimum event count limit of "+str(Rule_AlertMinimumEventCount)+" times.","DEBUG",esLogLevelGv)
-                
-                
-    if DEBUG:
-        print("Query result from current run (Group values with timestamp:")
-        print(CurrentAggResult)
-        print("Query result from previous run saved in DynamoDB:")
-        print(Rule_LastAggResult)
+    print ("Number of hits: ",hits)
     
+    if hits > 0:
+        for hit in result["hits"]["hits"]:
 
-    #
-    # Compare current search result with stored results
-    #
-    
-    AlertOccurrences = {}
-    NewAggResult_tmp = Rule_LastAggResult
-    NewAggResult = {}
-    
-    for currentAggField in CurrentAggResult:
-        if currentAggField in Rule_LastAggResult.keys():
-            occurrencerTimeDiff = CurrentAggResult[currentAggField] - Rule_LastAggResult[currentAggField]
-            
-            # Alert on this new occurrence (new within alert time frame)
-            if (occurrencerTimeDiff/60 > Rule_AlertPeriodMinutes):
-                AlertOccurrences[currentAggField] = (occurrencerTimeDiff/60 > Rule_AlertPeriodMinutes)
-                consoleLog(currentAggField + " found in previous occurrences. Alert because last occurrence was too long ago ","DEBUG",esLogLevelGv)
-            
-            NewAggResult_tmp[currentAggField] = QueryTime  # includes new and old occurrences (needs clean up later)  
-            
-        else:
-            # Alert on this new occurrence
-            consoleLog(currentAggField + " found in current occurrences. Alert because its new","DEBUG",esLogLevelGv) 
-            AlertOccurrences[currentAggField] = QueryTime
-            NewAggResult_tmp[currentAggField] = QueryTime  # includes new and old occurrences (needs clean up later)
-    
+            if DEBUG:
+                print("-------Hit---------")
+                #print(hit)
 
+
+            Rule_condition = {
+                "search_field" : "requestParameters",
+                "search_regex" : '.*{"key": "test", "value": "true"}.*',
+                "search_logic" : False
+            }
+
+            search_field = Rule_condition["search_field"]
+            search_regex = r"{}".format(Rule_condition["search_regex"])
+            search_logic = Rule_condition["search_logic"]
+
+            # check if search_field exists
+            if search_field in hit["_source"]:
+
+                if hit["_source"][search_field]:
+
+                    # check for search_regex 
+                    line=str(hit["_source"][search_field])
+                    matchObj = re.search( search_regex, line, re.M|re.I)
     
-    #
-    # Clean up NewAggResult (remove events older then Rule_AlertPeriodMinutes).  
-    #
-    
-    for AggField in NewAggResult_tmp:
-        if (QueryTime - NewAggResult_tmp[AggField]) > Rule_AlertPeriodMinutes:
-            consoleLog(AggField + " removed from stored list of occurrences (out of alert window)","DEBUG",esLogLevelGv)
-        else:
-            # build new list
-            NewAggResult[AggField] = NewAggResult_tmp[AggField]
-    
-    
-    if DEBUG:
-        print("New list of query results to be stored in DynamoDB")
-        for AggField in NewAggResult:
-            print (AggField +":"+ str(NewAggResult[AggField]))
-        
-    
-    #
-    # Update stored results (NewAggResult)
-    #
-    
-    if not TEST_NOUPDATE:
-        consoleLog("Updating database with list of occurrences","INFO",esLogLevelGv)
-        response = dynamodb_table.update_item(
-            Key={
-                'RuleId': RuleId,
-                'RuleType': RuleType
-            },
-            UpdateExpression="set LastAggResult=:l",
-            ExpressionAttributeValues={
-                ':l': NewAggResult
-            },
-            ReturnValues="UPDATED_NEW"
-        )
-    else:
-        consoleLog("Skip update of database for new list of occurrences (Test_NOUPDATE=True)","INFO",esLogLevelGv)
+                    if matchObj and search_logic:
+                        print('Rule condition met to find regex in '+search_field)
+                        AlertOccurrences[search_field] = QueryTime
+                    else:
+                        if not matchObj and not search_logic:
+                            print('Rule condition met to not find regex in '+search_field)
+                            AlertOccurrences[search_field] = QueryTime
+                        else:
+                            print('Rule condition not met. ')
+
     
     
     #
@@ -297,21 +246,12 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
         Message = Rule_AlertText+"\n"+"Alert Value: "+AggField+"\nRule Id: "+RuleId+"\nRule Type: "+RuleType+"\nElasticsearch Index: "+Rule_ES_Index+"\nAlert window: "+str(Rule_AlertPeriodMinutes)+" minutes\n"
         consoleLog("ALERT MESSAGE:"+Message,"DEBUG",esLogLevelGv)
         
-        if SEND_ALERT:
+        if SEND_SNS:
             consoleLog("Send alert for new occurrence: "+AggField,"INFO",esLogLevelGv)
             response = sns.publish(TopicArn=SnsTopicArn,   
                 Message=Message,   
             )
         
-            # Add alert to Elasticsearch index
-            jsonDoc = {
-                "AlertDateTime":int(time.time()),
-                "Rule_Id":RuleId,
-                "Rule_Type":RuleType,
-                "Alert_Value":AggField
-            }
-            retval = esClient.index(index="monitorlizardalerts", body=jsonDoc)     
-            consoleLog("Add document to Elasticsearch index MonitorLizardAlerts : {0}".format(retval),"DEBUG",esLogLevelGv)
         
     return
 
@@ -371,10 +311,10 @@ def lambda_handler(event, context):
     # Execute rules of type "User activity anomaly"
     #
     
-    RuleType = "User activity anomaly"
+    RuleType = "Find single event"
 
     response = dynamodb_table.scan(
-        FilterExpression=Attr('RuleType').eq("User activity anomaly")
+        FilterExpression=Attr('RuleType').eq(RuleType)
     )
 
     
@@ -385,7 +325,7 @@ def lambda_handler(event, context):
     
     
     for Rule in response["Items"]:
-        print()
+        
         if Rule["LastRun"]+(Rule["RunScheduleInMinutes"]*60) < int(time.time()):
         
             print("--------------------------")
@@ -407,13 +347,11 @@ def lambda_handler(event, context):
             )
         else:
             print("--------------------------")
-            
-            if (TEST_IGNORE_LASTRUN):
-                runRule(esClient, dynamodb_table, sns, Rule["RuleId"], Rule["RuleType"])
-            else:
-                print( "Skipping SIEM rule because of LastRun setting: "+Rule["RuleId"] )
+            print( "Skipping SIEM rule "+Rule["RuleId"] +" because recent execution")
     
     
+    
+     
 
     
     return {

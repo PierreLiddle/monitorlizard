@@ -5,7 +5,7 @@
 Find activities that haven’t been performed by a particular user, IP or accessKey in the last n minutes or for the first time {at least n times}
 
 **Example 1:**
-Find EC2 create events performed from a “new” IAM access key. 
+Find EC2 create events performed from a “new” IAM user. 
 Autoscale user creates EC2 instances all the time. A malicious user does it for the first time.
 
 **Example 2:** 
@@ -155,6 +155,7 @@ Example DynamoDB Test Rule
     "AKIA4RKH6JM6CBCA3X5U": 1595122200,
     "ASIA4RKH6JM6KFARZXXX": 1595122200
   },
+  "LastRun": 1595858028,
   "Query": "{\n    \"query\": {\n    \"bool\": {\n\n      \"must_not\": [\n        {\n          \"match\": {\n            \"userIdentity.type\": \"AWSService\"\n          }\n        }\n      ],\n      \n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"RunInstances*\"\n          }\n        }\n      ],\n      \n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"ec2.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        \n        { \"range\": { \"eventTime\": { \"gte\": \"2020-05-01T00:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.accessKeyId.keyword\",\n        \"order\": { \"_count\": \"desc\" },\n        \"size\":5\n          }\n        }\n    }\n}",
   "ES_Index": "cloudtrail*"
 }

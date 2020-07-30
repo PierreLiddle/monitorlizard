@@ -63,3 +63,30 @@ New users launching EC2 instance (AlertPeriodInMinutes=3600, AlertMinimumEventCo
 
 
 
+## Example 4
+
+Find any create user event
+
+```
+{
+    "_source": {
+        "includes": ["eventTime", "eventSource", "eventName", "requestParameters"]},
+    "query": {
+    "bool": {
+      "must": [
+        {
+          "wildcard": {
+            "eventName.keyword": "CreateUser"
+          }
+        }
+      ],
+      "filter": [
+        {"term": {"eventSource.keyword":"iam.amazonaws.com"}},
+        {"term": {"recipientAccountId.keyword":"861828696892"}},
+        { "range": { "eventTime": { "gte": "2020-07-25T08:00:00.000Z" }}}
+      ] 
+    }
+  }
+}
+```
+
