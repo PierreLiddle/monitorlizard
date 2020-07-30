@@ -63,7 +63,8 @@ New users creating S3 bucket (AlertPeriodInMinutes=3600, AlertMinimumEventCount=
 Failed user authentication (AlertPeriodInMinutes=5, AlertMinimumEventCount=3)
 > Alert by user if the query found more than 3 failed user logins within the last 5 minutes
 
-
+  
+            
 
 ## Alert Example
 

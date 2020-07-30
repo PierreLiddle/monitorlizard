@@ -46,11 +46,11 @@ from datetime import datetime
 
 # Globals
 DEBUG = True 
-TEST_SNS = False    # no execution of any rule, just send a sinple test message
-SEND_SNS = False     # execute rules, but don't send a message
-TEST_RULE = "Create IAM user"  # Execute only rule with this rule Id. Ignore LastRun settings
-TEST_NOUPDATE = True # Don't update LastAggResult in DynamoDB
-TEST_AlertPeriod = 10000  # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool
+TEST_SNS = False                # no execution of any rule, just send a sinple test message
+SEND_ALERT = False               # Send or send not SNS alrert message and add document to index MonitorLizardAlerts
+TEST_RULE = "Create IAM user"                  # Execute only rule with this rule Id. Ignore LastRun settings. Default is ""
+TEST_NOUPDATE = True            # Don't update LastAggResult in DynamoDB
+TEST_AlertPeriod = 10000        # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool
 
 
 
@@ -163,8 +163,12 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
         Rule_LastAggResult = DBresponse["Items"][0]["LastAggResult"]
         Rule_AlertPeriodMinutes = DBresponse["Items"][0]["AlertPeriodMinutes"]
         Rule_AlertText = DBresponse["Items"][0]["AlertText"]
+        
+        Rule_Condition = json.loads(DBresponse["Items"][0]["Rule_Condition"])
+
     except Exception as E:
-        consoleLog("Error reading some of the database values.","ERROR",esLogLevelGv)
+        print(E)
+        consoleLog("Error reading some of the database values. JSON error?.","ERROR",esLogLevelGv)
         return
         
     
@@ -203,55 +207,96 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
         for hit in result["hits"]["hits"]:
 
             if DEBUG:
-                print("-------Hit---------")
+                print("-------rule query hit---------")
+                print("checking rule condition for this document")
                 #print(hit)
 
-
-            Rule_condition = {
-                "search_field" : "requestParameters",
-                "search_regex" : '.*{"key": "test", "value": "true"}.*',
-                "search_logic" : False
+            # Test
+            '''
+            Rule_Condition = {
+                "matches": [{
+                    "search_field" : "requestParameters",
+                    "search_regex" : '.*{"key": "test", "value": "true"}.*',
+                    "search_logic" : True
+                },{
+                    "search_field" : "recipientAccountId",
+                    "search_regex" : '861828696892',
+                    "search_logic" : True
+                }]
             }
-
-            search_field = Rule_condition["search_field"]
-            search_regex = r"{}".format(Rule_condition["search_regex"])
-            search_logic = Rule_condition["search_logic"]
-
-            # check if search_field exists
-            if search_field in hit["_source"]:
-
-                if hit["_source"][search_field]:
-
-                    # check for search_regex 
-                    line=str(hit["_source"][search_field])
-                    matchObj = re.search( search_regex, line, re.M|re.I)
+            '''
+            
+            # Check all conditions for this hit
+            # Only alert, if all conditions are met
+            RuleFired = True
+            
+            for match in Rule_Condition["matches"]:
+                
+                search_field = match["search_field"]        # Elasticsearch field
+                search_regex = r"{}".format(match["search_regex"])      # regex
+                search_logic = match["search_logic"]                    # True or False (Rule fires if regex is a match or not match)
+                
+                # Convert to boolean value
+                if search_logic.lower() == "true":
+                    search_logic = True
+                else:
+                    search_logic = False
     
-                    if matchObj and search_logic:
-                        print('Rule condition met to find regex in '+search_field)
-                        AlertOccurrences[search_field] = QueryTime
-                    else:
-                        if not matchObj and not search_logic:
-                            print('Rule condition met to not find regex in '+search_field)
-                            AlertOccurrences[search_field] = QueryTime
+    
+    
+                print ("Check if ",search_field," matches ",search_regex," is ",search_logic)
+                
+                # check if search_field exists
+                if search_field in hit["_source"]:
+    
+                    if hit["_source"][search_field]:
+    
+                        # check for search_regex 
+                        line=str(hit["_source"][search_field])
+                        matchObj = re.search( search_regex, line, re.M|re.I)
+        
+                        if matchObj and search_logic:
+                            print(' > condition met. Alert only raised if all conditions match.')
                         else:
-                            print('Rule condition not met. ')
-
-    
+                            if not matchObj and not search_logic:
+                                print(' > condition met.  Alert only raised if all conditions match.')
+                            else:
+                                print(' > condition NOT met. No alert for this rule raised.')
+                                RuleFired = False
+                else:
+                    print ("Field ",search_field," not found in Elasticsearch document ")
+                
+            # Fire rule if all conditions are met
+            if RuleFired:
+                docId = hit["_id"]
+                AlertOccurrences[docId] = QueryTime
+        
     
     #
     # Raise alerts
     #
     for AggField in AlertOccurrences:
         
-        Message = Rule_AlertText+"\n"+"Alert Value: "+AggField+"\nRule Id: "+RuleId+"\nRule Type: "+RuleType+"\nElasticsearch Index: "+Rule_ES_Index+"\nAlert window: "+str(Rule_AlertPeriodMinutes)+" minutes\n"
-        consoleLog("ALERT MESSAGE:"+Message,"DEBUG",esLogLevelGv)
+        Message = Rule_AlertText+"\n"+"Document (_id): "+AggField+"\nRule Id: "+RuleId+"\nRule Type: "+RuleType+"\nElasticsearch Index: "+Rule_ES_Index+"\nAlert window: "+str(Rule_AlertPeriodMinutes)+" minutes\n"
+        #consoleLog("ALERT MESSAGE:"+Message,"DEBUG",esLogLevelGv)
         
-        if SEND_SNS:
-            consoleLog("Send alert for new occurrence: "+AggField,"INFO",esLogLevelGv)
+        if SEND_ALERT:
+            consoleLog("Send alert for document _id: "+AggField,"INFO",esLogLevelGv)
             response = sns.publish(TopicArn=SnsTopicArn,   
                 Message=Message,   
             )
         
+            # Add alert to Elasticsearch index
+            AlertDateTime = datetime.utcfromtimestamp(int(time.time())).strftime('%Y-%m-%dT%H:%M:%SZ') 
+            
+            jsonDoc = {
+                "AlertDateTime":AlertDateTime,
+                "Rule_Id":RuleId,
+                "Rule_Type":RuleType,
+                "Alert_Value":AggField
+            }
+            retval = esClient.index(index="monitorlizardalerts", body=jsonDoc)     
+            consoleLog("Add document to Elasticsearch index MonitorLizardAlerts : {0}".format(retval),"DEBUG",esLogLevelGv)
         
     return
 
@@ -318,7 +363,7 @@ def lambda_handler(event, context):
     )
 
     
-    if len(TEST_RULE):
+    if TEST_RULE:
         print( "Executing TEST_RULE only " )
         runRule(esClient, dynamodb_table, sns, TEST_RULE, RuleType)
         return
