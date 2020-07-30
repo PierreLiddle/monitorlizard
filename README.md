@@ -64,4 +64,4 @@ User that executes multiple commands within time window such as (
 Find first occurrence of user activity but alert only if a particular field value is seen for the first time.
 
 Example 1: User logs in from country he/she hasn’t logged in before (last x days)
-Example 2: User assumes role for the first time he/she hasn't used before
+Example 2: User assumes role for the first time he/she hasn't used before 
