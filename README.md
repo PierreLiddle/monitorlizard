@@ -15,6 +15,12 @@ Monitor Lizard can be used to define customized threat detection rules that are 
 ### What is log correlation?
 Log correlation compares different events rather than just checking for details within a single event. The most prominent and simple example are multiple failed login events from the IP same source.
 
+### Use cases and rules
+Monitor Lizard supports multiple use cases (see below). Each use case can run multiple rules or configuration sets. E.g. the use case "Find single event" can have a rule that finds suspicious EC2 events and another rule that looks for suspicious IAM events.
+
+### Alerting
+Monitor Lizard can send SNS messages and add a new document into an Elasticsearch index each time a rule fires.
+
 ## What is it not?
 The security data lake solution in combination with Monitor Lizard provides some features that are typically provided by SIEM solutions but the functionality of Monitor Lizards event correlation capabilities limited. The intention is not to build a new SIEM solution but to provide basic event correlation without the need of a SIEM.
 
@@ -27,7 +33,7 @@ Monitor Lizard can be deployed quickly and provides a good baseline capability w
 
 
 ### ELK struggles with correlation
-The ELK Stack does not come with built-in correlation rules, and so it is up to the analyst to use Kibana queries, based on the parsing and processing performed using Logstash, to correlate between events. This is a manual task and ELK is not designed to perform automated log correlation. 
+The ELK Stack does not come with built-in correlation rules or advanced correlation capabilities, and so it is up to the analyst to use Kibana queries, based on the parsing and processing performed using Logstash, to correlate between events. This is a manual task and ELK is not designed to perform automated log correlation. 
 
 
 
