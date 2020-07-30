@@ -60,7 +60,7 @@ User that executes multiple commands within time window such as (
 * CreateUser and CreateAccessKey (for same user)
 
 
-##Use Case #4:“User activity anomaly v2”
+## Use Case #4:“User activity anomaly v2”
 Find first occurrence of user activity but alert only if a particular field value is seen for the first time.
 
 Example 1: User logs in from country he/she hasn’t logged in before (last x days)
