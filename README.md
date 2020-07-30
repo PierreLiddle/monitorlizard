@@ -37,7 +37,11 @@ Find users or IP addresses that have performed actions for the first time within
 Examples:
 1. Alert on users that have launched an EC2 instance in production for the first time in 10 days.
 	Autoscale happens frequently, but an attacker would do this with a different IAM user for the first time.
-2. Alert on users that have created a S3 bucket in the production account
+2. Alert on users that have created a S3 bucket or used DynamoDB in the production account for the first time
+3. More than 3 user signin failures within 5 minutes (sign in or assume role)
+
+
+
 
 
 ### Use Case 2: Find single events
