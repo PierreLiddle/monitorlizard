@@ -45,12 +45,13 @@ from datetime import datetime
 
 
 # Globals
-DEBUG = True 
-TEST_SNS = False                # no execution of any rule, just send a sinple test message
-SEND_ALERT = False               # Send or send not SNS alrert message and add document to index MonitorLizardAlerts
-TEST_RULE = "Create IAM user"                  # Execute only rule with this rule Id. Ignore LastRun settings. Default is ""
-TEST_NOUPDATE = True            # Don't update LastAggResult in DynamoDB
-TEST_AlertPeriod = 10000        # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool
+DEBUG = True                    # Default: False
+TEST_SNS = False                # no execution of any rule, just send a sinple test message,  Default: False
+SEND_ALERT = False              # Send or send not SNS alrert message and add document to index MonitorLizardAlerts,  Default: True
+TEST_RULE = "Create IAM user"   # Execute only rule with this rule Id. Ignore LastRun settings, Default ""
+#TEST_NOUPDATE = False          # Don't update LastAggResult in DynamoDB, Default: False
+TEST_AlertPeriod = 0            # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool, Default: 0
+TEST_IGNORE_LASTRUN = False     # Run regardless of recent execution,  Default: False
 
 
 
@@ -224,6 +225,20 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
                     "search_logic" : True
                 }]
             }
+            
+            this needs to be stored in DynamoDB in the following format:
+            
+            {
+                "matches": [{
+                    "search_field" : "requestParameters",
+                    "search_regex" : ".*{.*\\"key\\".*:.* \\"test\\", \\"value\\".*:.* \\"true\\".*",
+                    "search_logic" : "True"
+                },{
+                    "search_field" : "recipientAccountId",
+                    "search_regex" : "861828696892",
+                    "search_logic" : "True"
+                }]
+            }
             '''
             
             # Check all conditions for this hit
@@ -232,7 +247,7 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
             
             for match in Rule_Condition["matches"]:
                 
-                search_field = match["search_field"]        # Elasticsearch field
+                search_field = match["search_field"]                    # Elasticsearch field
                 search_regex = r"{}".format(match["search_regex"])      # regex
                 search_logic = match["search_logic"]                    # True or False (Rule fires if regex is a match or not match)
                 
@@ -392,7 +407,10 @@ def lambda_handler(event, context):
             )
         else:
             print("--------------------------")
-            print( "Skipping SIEM rule "+Rule["RuleId"] +" because recent execution")
+            if (TEST_IGNORE_LASTRUN):
+                runRule(esClient, dynamodb_table, sns, Rule["RuleId"], Rule["RuleType"])
+            else:
+                print( "Skipping SIEM rule because of LastRun setting: "+Rule["RuleId"] )
     
     
     

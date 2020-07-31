@@ -7,7 +7,7 @@ Cloud native event detection engine for AWS logs stored in Elasticsearch
 ## What is it?
 Monitor Lizard runs ontop of the Elasticsearch [securty data lalke](https://github.com/awsvolks/securitydatalake) solution and performs customized event correlation within AWS native logs using AWS native solutions such as AWS Lambda, Amazon DynamoDB, AWS SNS and the Amazon Elasticsearch service for the purpose of threat and anomaly detection.
 
-The main idea behind this solution is to find events that look legit but are suspicious. These events are called "known unknowns" 
+The main idea behind this solution is to find events that look legit but are suspicious. These events are called "known unknowns" by security analysts and are typically used for malwareless "living of the land" attacks. 
 
 Examples:
 
@@ -66,7 +66,7 @@ Examples:
 
 
 
-### Use Case 2: Find single events
+### [Use Case 2: Find single events] (https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase2)
 Find events that include or do not include certain values (regex) within log fields. A rule can define multiple `find` or `missing` conditions.
 
 Examples:
