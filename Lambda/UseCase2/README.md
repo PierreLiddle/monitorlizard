@@ -1,4 +1,4 @@
-# Use Case “Find single events”
+# Use Case “Event anomaly”
 
 ## Introduction
 

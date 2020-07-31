@@ -56,7 +56,9 @@ The ELK Stack does not come with built-in correlation rules or advanced correlat
 ## Currently supported use cases
 ### [Use Case 1: User activity anomaly](https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase1)
 Find users or IP addresses that have performed actions for the first time within n minutes
+
 Examples:
+
 1. Alert on users that have launched an EC2 instance in production for the first time in 10 days.
 	Autoscale happens frequently, but an attacker would do this with a different IAM user for the first time.
 2. Alert on users that have created a S3 bucket or used DynamoDB in the production account for the first time
@@ -66,7 +68,7 @@ Examples:
 
 
 
-### [Use Case 2: Find single events] (https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase2)
+### [Use Case 2: Event anomaly] (https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase2)
 Find events that include or do not include certain values (regex) within log fields. A rule can define multiple `find` or `missing` conditions.
 
 Examples:

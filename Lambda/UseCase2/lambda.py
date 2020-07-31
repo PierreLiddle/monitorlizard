@@ -1,6 +1,6 @@
 #
 # Monitor Lizard - Rule2
-# Use Case “Find single event”
+# Use Case “Event anomaly”
 #
 # Version: 28072020
 #
@@ -49,7 +49,7 @@ DEBUG = True                    # Default: False
 TEST_SNS = False                # no execution of any rule, just send a sinple test message,  Default: False
 SEND_ALERT = False              # Send or send not SNS alrert message and add document to index MonitorLizardAlerts,  Default: True
 TEST_RULE = "Create IAM user"   # Execute only rule with this rule Id. Ignore LastRun settings, Default ""
-#TEST_NOUPDATE = False          # Don't update LastAggResult in DynamoDB, Default: False
+TEST_NOUPDATE = False           # Don't update LastAggResult in DynamoDB, Default: False
 TEST_AlertPeriod = 0            # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool, Default: 0
 TEST_IGNORE_LASTRUN = False     # Run regardless of recent execution,  Default: False
 
@@ -164,7 +164,7 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
         Rule_LastAggResult = DBresponse["Items"][0]["LastAggResult"]
         Rule_AlertPeriodMinutes = DBresponse["Items"][0]["AlertPeriodMinutes"]
         Rule_AlertText = DBresponse["Items"][0]["AlertText"]
-        
+        Rule_Description = DBresponse["Items"][0]["Description"]
         Rule_Condition = json.loads(DBresponse["Items"][0]["Rule_Condition"])
 
     except Exception as E:
@@ -292,7 +292,12 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
     #
     for AggField in AlertOccurrences:
         
-        Message = Rule_AlertText+"\n"+"Document (_id): "+AggField+"\nRule Id: "+RuleId+"\nRule Type: "+RuleType+"\nElasticsearch Index: "+Rule_ES_Index+"\nAlert window: "+str(Rule_AlertPeriodMinutes)+" minutes\n"
+        Message = Rule_AlertText
+        Message = Message + "\nDescription: "+Rule_Description
+        Message = Message + "\n"+"Alert Value: "+AggField+"\nRule Id: "+RuleId+"\nRule Type: "+RuleType+"\nElasticsearch Index: "+Rule_ES_Index+"\nAlert window: "+str(Rule_AlertPeriodMinutes)+" minutes\n"
+        Message = Message + "\nAlert Query: "+Rule_Query
+        
+        
         #consoleLog("ALERT MESSAGE:"+Message,"DEBUG",esLogLevelGv)
         
         if SEND_ALERT:
@@ -371,7 +376,7 @@ def lambda_handler(event, context):
     # Execute rules of type "User activity anomaly"
     #
     
-    RuleType = "Find single event"
+    RuleType = "Event anomaly"
 
     response = dynamodb_table.scan(
         FilterExpression=Attr('RuleType').eq(RuleType)
