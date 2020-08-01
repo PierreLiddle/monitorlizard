@@ -53,9 +53,10 @@ The ELK Stack does not come with built-in correlation rules or advanced correlat
 
 
 
-## Currently supported use cases
+## Use cases
 ### [Use Case 1: User activity anomaly](https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase1)
-Find users or IP addresses that have performed actions for the first time within n minutes
+Find users or IP addresses that have performed actions for the first time within n minutes.
+Find users that performed an action more then n times within n minutes.
 
 Examples:
 
@@ -72,6 +73,7 @@ Examples:
 Find events that include or do not include certain values (regex) within log fields. A rule can define multiple `find` or `missing` conditions.
 
 Examples:
+
 1. Find EC2 RunInstances events with a specific Tag
 2. Find EC2 RunInstances events with a specific Tag missing
 3. Find launch EC2 instance events within the production account not performed by a specific role
@@ -80,12 +82,13 @@ Examples:
 
 ## Backlog
 
-### Use Case #3: “Context anomaly”
+### Use Case #3: “Event correlation”
 
 User that executes multiple commands within time window such as (
 
 * Change bucket policy and delete bucket (for same bucket)
 * CreateUser and CreateAccessKey (for same user)
+
 
 
 ### Use Case #4:“User activity anomaly v2”
