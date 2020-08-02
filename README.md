@@ -19,26 +19,19 @@ Examples:
 
 4. For static and very sensitive environments, all create, modify and delete events (eventName:Create\*, Update\*, Delete\*, Stop\*) can be monitored.
 
+Another use case could be the detection of triggers originating from decoys services used as a deception mechanism. 
 
+Monitor Lizard can send SNS messages and adds a new document into an Elasticsearch index each time a rule fires.
 
-But doesn't Amazon GuardDuty do this job already?  
-Amazon GuardDuty is a threat detection soluton that utilizes AWS native logs and threat intelligence sources in order to find suspicious events within accounts and workloads such as traffic originating from malicious sources or the deactivation of security controls. Monitor Lizard can be used to define customized threat detection rules that are individual to an organisation such as finding specific events within the production account that are not performed by a specific role.
+### But doesn't Amazon GuardDuty do this job already? 
+Amazon GuardDuty is a threat detection soluton that utilizes AWS native logs and threat intelligence sources in order to find suspicious events within accounts and workloads such as traffic originating from malicious sources or the deactivation of security controls. GuardDuty is managed by AWS and is focusing on generally applicable threat detection strategies. Monitor Lizard can be used to define customized threat detection rules that are individual to an organisation such as finding specific events within the production account.
 
-
-### What is log correlation?
-Log correlation compares different events rather than just checking for details within a single event. The most prominent and simple example are multiple failed login events originating from the same IP address.
-
-### Use cases and rules
-Monitor Lizard supports multiple use cases (see below). Each use case can run multiple rules or configuration sets. E.g. the use case "Find single event" can have a rule that finds suspicious EC2 events and another rule that looks for suspicious IAM events.
-
-### Alerting
-Monitor Lizard can send SNS messages and add a new document into an Elasticsearch index each time a rule fires.
-
-### Tip
-Develop operating practices that help you to easier distinguish good from bad events. E.g. by the use of tagging, a clear separation between different account types (prod, test, dev), controlled deployment practices etc.
 
 ## What is it not?
-The security data lake solution in combination with Monitor Lizard provides some correlation features that are typically provided by SIEM solutions but Monitor Lizard. SIEMs are more feature rich and do also utilise threat intelligence to find malicious activities. The intention behind this solution is not to build a new SIEM solution but to provide basic event correlation capabilities if no SIEM is available.
+The security data lake solution in combination with Monitor Lizard provides some correlation features that are typically provided by SIEM solutions but Monitor Lizard. SIEMs are more feature rich and do also utilise threat intelligence to find malicious activities. SIEMs are also geared to consume a large amount of different log types accross the solution stack.
+
+The intention behind Monitor Lizard is not to build another SIEM solution but to provide basic event correlation capabilities for AWS native logs if no SIEM is available.
+
 
 
 ## Why did we build it?
@@ -52,8 +45,19 @@ Monitor Lizard can be deployed quickly and provides a good baseline capability w
 The ELK Stack does not come with built-in correlation rules or advanced correlation capabilities, and so it is up to the analyst to use Kibana queries, based on the parsing and processing performed using Logstash, to correlate between events. This is a manual task and ELK is not designed to perform automated log correlation. 
 
 
+### What is log correlation?
+Log correlation compares different events rather than just checking for details within a single event. The most prominent and simple example are multiple failed login events originating from the same IP address.
+
+
 
 ## Use cases
+
+### Use cases and rules
+Monitor Lizard supports multiple use cases (see below). Each use case can run multiple rules or configuration sets. E.g. the use case "Find single event" can have a rule that finds suspicious EC2 events and another rule that looks for suspicious IAM events.
+
+### Tip
+Develop operating practices that help you to easier distinguish good from bad events. E.g. by the use of tagging, a clear separation between different account types (prod, test, dev), controlled deployment practices etc.
+
 ### [Use Case 1: User activity anomaly](https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase1)
 Find users or IP addresses that have performed actions for the first time within n minutes.
 Find users that performed an action more then n times within n minutes.
@@ -64,7 +68,6 @@ Examples:
 	Autoscale happens frequently, but an attacker would do this with a different IAM user for the first time.
 2. Alert on users that have created a S3 bucket or used DynamoDB in the production account for the first time
 3. More than 3 user signin failures within 5 minutes (sign in or assume role)
-
 
 
 

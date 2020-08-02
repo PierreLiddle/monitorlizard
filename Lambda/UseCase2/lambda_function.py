@@ -47,11 +47,11 @@ from datetime import datetime
 # Globals
 DEBUG = True                    # Default: False
 TEST_SNS = False                # no execution of any rule, just send a sinple test message,  Default: False
-SEND_ALERT = False              # Send or send not SNS alrert message and add document to index MonitorLizardAlerts,  Default: True
-TEST_RULE = "Create IAM user"   # Execute only rule with this rule Id. Ignore LastRun settings, Default ""
+SEND_ALERT = True              # Send or send not SNS alrert message and add document to index MonitorLizardAlerts,  Default: True
+TEST_RULE = "Create Programmatic Access Key"   # Execute only rule with this rule Id. Ignore LastRun settings, Default ""
 TEST_NOUPDATE = False           # Don't update LastAggResult in DynamoDB, Default: False
-TEST_AlertPeriod = 0            # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool, Default: 0
-TEST_IGNORE_LASTRUN = False     # Run regardless of recent execution,  Default: False
+TEST_AlertPeriod = 999999            # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool, Default: 0
+TEST_IGNORE_LASTRUN = True     # Run regardless of recent execution,  Default: False
 
 
 
@@ -209,7 +209,7 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
 
             if DEBUG:
                 print("-------rule query hit---------")
-                print("checking rule condition for this document")
+                print("checking rule condition for document id "+hit["_id"])
                 #print(hit)
 
             # Test
@@ -284,7 +284,8 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
             # Fire rule if all conditions are met
             if RuleFired:
                 docId = hit["_id"]
-                AlertOccurrences[docId] = QueryTime
+                AlertOccurrences[docId] = hit["_source"]
+                print ("Rule fired ")
         
     
     #
@@ -294,11 +295,12 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
         
         Message = Rule_AlertText
         Message = Message + "\nDescription: "+Rule_Description
-        Message = Message + "\n"+"Alert Value: "+AggField+"\nRule Id: "+RuleId+"\nRule Type: "+RuleType+"\nElasticsearch Index: "+Rule_ES_Index+"\nAlert window: "+str(Rule_AlertPeriodMinutes)+" minutes\n"
-        Message = Message + "\nAlert Query: "+Rule_Query
+        Message = Message + "\nQuery Result: "+str(AlertOccurrences[AggField])
+        Message = Message + "\nRule Id: "+RuleId+"\nRule Type: "+RuleType+"\nElasticsearch Index: "+Rule_ES_Index+"\nAlert window: "+str(Rule_AlertPeriodMinutes)+" minutes\n"
+        Message = Message + "\nAlert Query: "+str(Rule_Query)
         
         
-        #consoleLog("ALERT MESSAGE:"+Message,"DEBUG",esLogLevelGv)
+        consoleLog("ALERT MESSAGE:"+Message,"DEBUG",esLogLevelGv)
         
         if SEND_ALERT:
             consoleLog("Send alert for document _id: "+AggField,"INFO",esLogLevelGv)
@@ -318,6 +320,8 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
             retval = esClient.index(index="monitorlizardalerts", body=jsonDoc)     
             consoleLog("Add document to Elasticsearch index MonitorLizardAlerts : {0}".format(retval),"DEBUG",esLogLevelGv)
         
+        else:
+            consoleLog("Alerting deactivated.","INFO",esLogLevelGv)
     return
 
 

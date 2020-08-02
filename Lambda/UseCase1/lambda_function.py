@@ -324,7 +324,9 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
             }
             retval = esClient.index(index="monitorlizardalerts", body=jsonDoc)     
             consoleLog("Add document to Elasticsearch index MonitorLizardAlerts : {0}".format(retval),"DEBUG",esLogLevelGv)
-        
+        else:
+            consoleLog("Alerting deactivated.","INFO",esLogLevelGv)
+            
     return
 
 
