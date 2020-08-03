@@ -84,6 +84,7 @@ Unauthorized Operation in Production	|	User activity anomaly	|	Unauthorized oper
 
 
 ### [Use Case 2: Event anomaly] (https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase2)
+
 Find events that include or do not include certain values (regex) within log fields. A rule can define multiple `find` or `missing` conditions.
 
 Examples:
@@ -108,7 +109,9 @@ Create IAM user	|	Event anomaly	|	New IAM user created: The following IAM users 
 
 
 
-### [Use Case 3: Login anomaly] (https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase3)
+
+### [Use Case 3: Login anomaly](https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase3)
+
 Find different login anomalies indicating either brute force or password spray attacks.
 
 Examples:
