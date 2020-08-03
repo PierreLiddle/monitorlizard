@@ -24,7 +24,7 @@ Another use case could be the detection of triggers originating from decoys serv
 Monitor Lizard can send SNS messages and adds a new document into an Elasticsearch index each time a rule fires.
 
 ### But doesn't Amazon GuardDuty do this job already? 
-Amazon GuardDuty is a threat detection soluton that utilizes AWS native logs and threat intelligence sources in order to find suspicious events within accounts and workloads such as traffic originating from malicious sources or the deactivation of security controls. GuardDuty is managed by AWS and is focusing on generally applicable threat detection strategies. Monitor Lizard can be used to define customized threat detection rules that are individual to an organisation such as finding specific events within the production account.
+Amazon GuardDuty is a threat detection soluton that utilizes AWS native logs and threat intelligence sources in order to find suspicious events within accounts and workloads such as traffic originating from malicious sources or the deactivation of security controls. GuardDuty is managed by AWS and is focusing on generally applicable threat detection strategies. Monitor Lizard can be used to define customized threat detection rules that are individual to an organisation or even to a workload.
 
 
 ## What is it not?
