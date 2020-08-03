@@ -1,20 +1,20 @@
 #
-# Monitor Lizard - Rule3
-# Use Case “Event correlation”
+# Monitor Lizard - Rule 3
 #
-# Version: 28072020
+# Version: 03082020
 #
 # Description: 
-#   Find event and check if another event occured within same time window
-#   Example use case: 
-#       First event  > Create user event 
-#       Second event > AttachUserPolicy event that includes requestParameters "policyArn": "arn:aws:iam::aws:policy/AlexaForBusinessFullAccess"
+#   Event detection for AWS events in Elasticsearch.
+#   Use Case “Login anomaly”
+#   Example use case: Different user ids coming from same IP. Different IPs for same user id.
 #
 # Author:
 #   Volker Rath, awsvolks@amazon.com
 #
 # Date:
-#   July 2020
+#   August 2020
+#
+# Ensure sufficient execution time for function: min 10 seconds
 #
 # Required Environment Variables:
 #   Key : Value
@@ -36,7 +36,6 @@ import botocore
 import urllib3
 import time
 import requests 
-import re
 from boto3.dynamodb.conditions import Key, Attr
 from Logger import consoleLog
 from datetime import datetime
@@ -47,14 +46,17 @@ from datetime import datetime
 
 
 # Globals
-DEBUG = True                    # Default: False
-TEST_SNS = False                # no execution of any rule, just send a sinple test message,  Default: False
-SEND_ALERT = False              # Send or send not SNS alrert message and add document to index MonitorLizardAlerts,  Default: True
-TEST_RULE = "Create IAM user"   # Execute only rule with this rule Id. Ignore LastRun settings, Default ""
-TEST_NOUPDATE = False           # Don't update LastAggResult in DynamoDB, Default: False
-TEST_AlertPeriod = 0            # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool, Default: 0
-TEST_IGNORE_LASTRUN = False     # Run regardless of recent execution,  Default: False
+DEBUG = True                # Default: False
+TEST_SNS = False            # no execution of any rule, just send a sinple test message,  Default: False
+SEND_ALERT = True           # Send or send not SNS alrert message and add document to index MonitorLizardAlerts,  Default: True
+TEST_RULE = ""              # Execute only rule with this rule Id. Ignore LastRun settings, Default ""
+TEST_NOUPDATE = False       # Don't update LastAggResult in DynamoDB, Default: False
+TEST_AlertPeriod = 0        # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool, Default: 0
+TEST_IGNORE_LASTRUN = False   # Run regardless of recent execution,  Default: False
 
+
+# Set rule type
+RuleType = "Login anomaly"
 
 
 # Read Environment Variables
@@ -153,8 +155,6 @@ def connectES(esEndPoint):
 
 def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
 
-    global DEBUG
-    
     # Read SIEM rule from DynamoDB 
     DBresponse = dynamodb_table.query(
         KeyConditionExpression=Key('RuleId').eq(RuleId)&Key('RuleType').eq(RuleType),
@@ -167,13 +167,13 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
         Rule_AlertPeriodMinutes = DBresponse["Items"][0]["AlertPeriodMinutes"]
         Rule_AlertText = DBresponse["Items"][0]["AlertText"]
         Rule_Description = DBresponse["Items"][0]["Description"]
-        Rule_Condition = json.loads(DBresponse["Items"][0]["Rule_Condition"])
+        Rule_AlertMinimumEventCount = DBresponse["Items"][0]["AlertMinimumEventCount"]
         Rule_Active = DBresponse["Items"][0]["RuleActive"]
     except Exception as E:
-        print(E)
-        consoleLog("Error reading some of the database values. JSON error?.","ERROR",esLogLevelGv)
-        return
-        
+        consoleLog("Error reading some of the database values.","ERROR",esLogLevelGv)
+        return    
+    
+    
     
     #
     # Remove eventTime range filter and replace with new time filter
@@ -195,127 +195,121 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
     
     
     #
-    # Run Elasticsearch query
+    # Read Elasticsearch aggregation query
+    #   with newly set time range filter
     #
    
     result = esClient.search( index=Rule_ES_Index, body=Rule_Query)    
     hits = result["hits"]["total"]["value"]
+    #bucket = result["aggregations"]["my_count"]["buckets"]                                       ## replace my_count with a dynamically detected custom agg name
     
-    AlertOccurrences ={}
+    
+    #
+    # Iterate through ElasticSearch aggregation result
+    #
+    
+    # GroupValues_current is an array with all aggregated values (group by) and the unix time from this query
+    CurrentAggResult = {}
     QueryTime = int(time.time())
+    AlertOccurrences = {}
     
-    print ("Number of hits: ",hits)
+    """
+    Example result:
     
-    if hits > 0:
-        for hit in result["hits"]["hits"]:
+    "aggregations" : {
+    "agg1" : {
+      "doc_count_error_upper_bound" : 0,
+      "sum_other_doc_count" : 0,
+      "buckets" : [
+        {
+          "key" : "arn:aws:sts::861828696892:assumed-role/God/awsvolks-Isengard",
+          "doc_count" : 17,
+          "agg2" : {
+            "doc_count_error_upper_bound" : 0,
+            "sum_other_doc_count" : 0,
+            "buckets" : [
+              {
+                "key" : "United States",
+                "doc_count" : 16
+              },
+              {
+                "key" : "Australia",
+                "doc_count" : 1
+              }
+            ]
+          }
+        }
+      ]
+    }
+    """
+    
+    x=0
+    # Get aggregation values and add current time
+    for customAggName, value in result["aggregations"].items():
+        # level 1 (first custom aggregation name)
+        if isinstance(value, (dict, list)):
+            buckets_layer1 = result["aggregations"][customAggName]["buckets"]
+            
+            for bucket_layer1 in buckets_layer1:
+                x=x+1
+                Layer1_GroupValue = bucket_layer1["key"]
+                Layer1_Count = bucket_layer1["doc_count"]
+            
+                print("Group Layer 1 value = ",Layer1_GroupValue,' (count=',Layer1_Count,")")
+                
+                
+            
+                # Get aggregation values of second layer
+                for customAggName2, value2 in bucket_layer1.items():
+                
+                    if isinstance(value2, (dict, list)):
+                    
+                        AllLayer2GroupValues = ""
+                        for bucket_layer2 in bucket_layer1[customAggName2]["buckets"]:
+                            AllLayer2GroupValues = AllLayer2GroupValues+bucket_layer2["key"]+", "
 
-            if DEBUG:
-                print("-------rule query hit---------")
-                print("checking rule condition for this document")
-                #print(hit)
+                        NumberOfLayer2Groups = len(bucket_layer1[customAggName2]["buckets"])
+                        
+                        
+                        if NumberOfLayer2Groups >= Rule_AlertMinimumEventCount:
+                            consoleLog("Rule fired.","DEBUG",esLogLevelGv)
+                            AlertOccurrences[x] = {'GroupValue': Layer1_GroupValue, 'OccurrenceCount': NumberOfLayer2Groups, 'Occurrences': AllLayer2GroupValues}
 
-            # Test
-            '''
-            Rule_Condition = {
-                "matches": [{
-                    "search_field" : "requestParameters",
-                    "search_regex" : '.*{"key": "test", "value": "true"}.*',
-                    "search_logic" : True
-                },{
-                    "search_field" : "recipientAccountId",
-                    "search_regex" : '861828696892',
-                    "search_logic" : True
-                }]
-            }
+                            
+                        
             
-            this needs to be stored in DynamoDB in the following format:
-            
-            {
-                "matches": [{
-                    "search_field" : "requestParameters",
-                    "search_regex" : ".*{.*\\"key\\".*:.* \\"test\\", \\"value\\".*:.* \\"true\\".*",
-                    "search_logic" : "True"
-                },{
-                    "search_field" : "recipientAccountId",
-                    "search_regex" : "861828696892",
-                    "search_logic" : "True"
-                }]
-            }
-            '''
-            
-            # Check all conditions for this hit
-            # Only alert, if all conditions are met
-            RuleFired = True
-            
-            for match in Rule_Condition["matches"]:
-                
-                search_field = match["search_field"]                    # Elasticsearch field
-                search_regex = r"{}".format(match["search_regex"])      # regex
-                search_logic = match["search_logic"]                    # True or False (Rule fires if regex is a match or not match)
-                
-                # Convert to boolean value
-                if search_logic.lower() == "true":
-                    search_logic = True
-                else:
-                    search_logic = False
     
     
-    
-                print ("Check if ",search_field," matches ",search_regex," is ",search_logic)
-                
-                # check if search_field exists
-                if search_field in hit["_source"]:
-    
-                    if hit["_source"][search_field]:
-    
-                        # check for search_regex 
-                        line=str(hit["_source"][search_field])
-                        matchObj = re.search( search_regex, line, re.M|re.I)
-        
-                        if matchObj and search_logic:
-                            print(' > condition met. Alert only raised if all conditions match.')
-                        else:
-                            if not matchObj and not search_logic:
-                                print(' > condition met.  Alert only raised if all conditions match.')
-                            else:
-                                print(' > condition NOT met. No alert for this rule raised.')
-                                RuleFired = False
-                else:
-                    print ("Field ",search_field," not found in Elasticsearch document ")
-                
-            # Fire rule if all conditions are met
-            if RuleFired:
-                docId = hit["_id"]
-                AlertOccurrences[docId] = QueryTime
-        
-    
+
+
     #
     # Raise alerts
     #
-    for AggField in AlertOccurrences:
+    for x in AlertOccurrences:
         
         Message = Rule_AlertText
         Message = Message + "\nDescription: "+Rule_Description
-        Message = Message + "\n"+"Alert Value: "+AggField+"\nRule Id: "+RuleId+"\nRule Type: "+RuleType+"\nElasticsearch Index: "+Rule_ES_Index+"\nAlert window: "+str(Rule_AlertPeriodMinutes)+" minutes\n"
-        Message = Message + "\nAlert Query: "+Rule_Query
+        Message = Message + "\nRule Id: "+RuleId+"\nRule Type: "+RuleType+"\nElasticsearch Index: "+Rule_ES_Index+"\nAlert window: "+str(Rule_AlertPeriodMinutes)+" minutes\n"
+        Message = Message + "\nGroup value: "+AlertOccurrences[x]['GroupValue']
+        Message = Message + "\nNumber of Occurrences: "+str(AlertOccurrences[x]['OccurrenceCount'])
+        Message = Message + "\nOccurrences (comma separated): "+AlertOccurrences[x]['Occurrences']
         
-        
-        #consoleLog("ALERT MESSAGE:"+Message,"DEBUG",esLogLevelGv)
+        consoleLog("ALERT MESSAGE:"+Message,"DEBUG",esLogLevelGv)
         
         if SEND_ALERT:
-            consoleLog("Send alert for document _id: "+AggField,"INFO",esLogLevelGv)
+            consoleLog("Send alert for new occurrence: "+AlertOccurrences[x]['GroupValue'],"INFO",esLogLevelGv)
             response = sns.publish(TopicArn=SnsTopicArn,   
                 Message=Message,   
             )
         
             # Add alert to Elasticsearch index
-            AlertDateTime = datetime.utcfromtimestamp(int(time.time())).strftime('%Y-%m-%dT%H:%M:%SZ') 
-            
+            AlertDateTime = datetime.utcfromtimestamp(int(time.time())).strftime('%Y-%m-%dT%H:%M:%SZ')      
+    
             jsonDoc = {
                 "AlertDateTime":AlertDateTime,
                 "Rule_Id":RuleId,
                 "Rule_Type":RuleType,
-                "Alert_Value":AggField
+                "Alert_Value":AlertOccurrences[x]['GroupValue']
             }
             retval = esClient.index(index="monitorlizardalerts", body=jsonDoc)     
             consoleLog("Add document to Elasticsearch index MonitorLizardAlerts : {0}".format(retval),"DEBUG",esLogLevelGv)
@@ -374,20 +368,20 @@ def lambda_handler(event, context):
         )
         consoleLog("Sent test SNS message.","INFO",esLogLevelGv)  
         return
-
+    
     
     #
-    # Execute rules of type "User activity anomaly"
+    # Execute rules of type "Login anomaly"
     #
     
-    RuleType = "Event anomaly"
-
+    consoleLog("Executing rule type "+RuleType,"INFO",esLogLevelGv)  
+    
     response = dynamodb_table.scan(
         FilterExpression=Attr('RuleType').eq(RuleType)
     )
 
     
-    if TEST_RULE:
+    if len(TEST_RULE):
         print( "Executing TEST_RULE only " )
         runRule(esClient, dynamodb_table, sns, TEST_RULE, RuleType)
         return
@@ -396,13 +390,12 @@ def lambda_handler(event, context):
     for Rule in response["Items"]:
         print()
         
-        if Rule["RuleActive"]:
+        if not Rule["RuleActive"]:
             print( "Skipping SIEM rule because rule has been deactivated (RuleActive=false)" )
             continue
     
-    
         if Rule["LastRun"]+(Rule["RunScheduleInMinutes"]*60) < int(time.time()):
-        
+
             print( "Executing rule: "+Rule["RuleId"] )
  
             runRule(esClient, dynamodb_table, sns, Rule["RuleId"], Rule["RuleType"])
@@ -421,14 +414,13 @@ def lambda_handler(event, context):
             )
         else:
             print("--------------------------")
+            
             if (TEST_IGNORE_LASTRUN):
                 runRule(esClient, dynamodb_table, sns, Rule["RuleId"], Rule["RuleType"])
             else:
                 print( "Skipping SIEM rule because of LastRun setting: "+Rule["RuleId"] )
     
     
-    
-     
 
     
     return {

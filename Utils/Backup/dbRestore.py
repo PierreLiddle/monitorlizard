@@ -5,7 +5,7 @@ import boto3
 from boto3.dynamodb.conditions import Key, Attr
 
 
-SOURCE = './DbBackup/SIEM.json'
+SOURCE = './DbBackup/MonitorLizardDynamoDB.json'
 DEST_TABLE = 'SIEM-Backup'
 
 

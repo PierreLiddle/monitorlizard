@@ -11,8 +11,12 @@ Find EC2 RunInstances events with a specific tag missing
 **Example 2:**
 Find any createUser events within a specific account with missing tags.
 
+## Tip
+Use Kibana to generate template for the query DSL. //
+Run query, click "Discover", click "Inspect", copy query.
 
-## Rule query logic
+
+## Rule query logic (Rule Field: Query)
 
 The following example query searches for all create user events. The alert logic is used to filter out users who were created without a specific tag within a specific account.
 
@@ -37,7 +41,11 @@ The query should be performed manually in Kibana-Dev tools for test purposes to 
 }
 ```
 
-## Rule alert logic
+## Rule alert logic (Rule Field: Rule_Condition)
+
+The rule fires, if the query result is matched with the alert logic. The alert logic can contain zero or multiple regex expressions that need to match for the rule to fire.
+
+Example:
 
 Search for all create user events (query logic) that were created without a specific tag within a specific account. 
 
@@ -71,5 +79,10 @@ this needs to be stored in DynamoDB in the following format (Boolean values in d
 }
 ``` 
 
+If all returned docuements of a query should result in the rule fireing, the following "match all" statement needs to be set in the Rule_Condition field:
+
+```
+{ "matches": [] }
+```
 
 

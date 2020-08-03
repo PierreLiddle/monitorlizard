@@ -52,6 +52,8 @@ TEST_NOUPDATE = False       # Don't update LastAggResult in DynamoDB, Default: F
 TEST_AlertPeriod = 0        # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool, Default: 0
 TEST_IGNORE_LASTRUN = False # Run regardless of recent execution,  Default: False
 
+# Set rule type
+RuleType = "User activity anomaly"
 
 # Read Environment Variables
 esAuthTypeEv = os.environ["ES_AUTH_TYPE"].lower()  #iam or esl, iam required for fine grained access, esl requires Login and Password to be set.
@@ -195,9 +197,7 @@ def runRule(esClient, dynamodb_table, sns, RuleId, RuleType):
    
     result = esClient.search( index=Rule_ES_Index, body=Rule_Query)    
     hits = result["hits"]["total"]["value"]
-    bucket = result["aggregations"]["my_count"]["buckets"]
-    
-    
+ 
     #
     # Iterate through ElasticSearch aggregation result
     #
@@ -385,10 +385,10 @@ def lambda_handler(event, context):
     # Execute rules of type "User activity anomaly"
     #
     
-    RuleType = "User activity anomaly"
-
+    consoleLog("Executing rule type "+RuleType,"INFO",esLogLevelGv) 
+    
     response = dynamodb_table.scan(
-        FilterExpression=Attr('RuleType').eq("User activity anomaly")
+        FilterExpression=Attr('RuleType').eq(RuleType)
     )
 
     
@@ -401,7 +401,7 @@ def lambda_handler(event, context):
     for Rule in response["Items"]:
         print()
         
-        if Rule["RuleActive"]:
+        if not Rule["RuleActive"]:
             print( "Skipping SIEM rule because rule has been deactivated (RuleActive=false)" )
             continue
     

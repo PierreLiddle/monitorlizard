@@ -1,0 +1,601 @@
+{
+    "Count": 15, 
+    "Items": [
+        {
+            "LastRun": {
+                "N": "1595927298"
+            }, 
+            "Rule_Condition": {
+                "S": "{\n    \"matches\": []\n}"
+            }, 
+            "Description": {
+                "S": "Event of high severity.  Verify legitimacy."
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "RuleId": {
+                "S": "IAM role created"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleType": {
+                "S": "Event anomaly"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "AlertText": {
+                "S": "Created IAM role in production account. "
+            }, 
+            "Query": {
+                "S": "{\n  \"size\": 100,\n  \"_source\": {\n        \"includes\": [\"eventTime\", \"eventName\", \"recipientAccountId\",\"eventSource\", \"userIdentity.arn\"]},\n  \"query\": {\n    \"bool\": {\n      \"must\": [],\n      \"filter\": [\n        {\"term\": {\"eventName.keyword\":\"CreateRole\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"051687089423\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-26T08:00:00.000Z\" }}}\n      ],\n      \"should\": [],\n      \"must_not\": []\n    }\n  }\n}\n"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1595927298"
+            }, 
+            "Rule_Condition": {
+                "S": "{\n    \"matches\": [{\n        \"search_field\" : \"requestParameters\",\n        \"search_regex\" : \".*tags*.\",\n        \"search_logic\" : \"False\"\n    },{\n        \"search_field\" : \"recipientAccountId\",\n        \"search_regex\" : \"861828696892\",\n        \"search_logic\" : \"True\"\n    }]\n}"
+            }, 
+            "Description": {
+                "S": "Verify if IAM user creation event is legit. Only federated users should be allowed in the environment."
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "RuleId": {
+                "S": "Create IAM user without tag"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleType": {
+                "S": "Event anomaly"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "AlertText": {
+                "S": "New IAM user created without tag:\nThe following IAM users where created. "
+            }, 
+            "Query": {
+                "S": "{\n    \"_source\": {\n        \"includes\": [\"eventTime\", \"recipientAccountId\",\"eventSource\", \"eventName\", \"requestParameters\"]},\n    \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"CreateUser\"\n          }\n        }\n      ],\n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"iam.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-25T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\": 100\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1595927298"
+            }, 
+            "Rule_Condition": {
+                "S": "{\n    \"matches\": []\n}"
+            }, 
+            "Description": {
+                "S": ""
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "RuleId": {
+                "S": "MFA deactivated"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleType": {
+                "S": "Event anomaly"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "AlertText": {
+                "S": "An MFA device has been deactivated and its association has been removed from a user. "
+            }, 
+            "Query": {
+                "S": "{\n    \"_source\": {\n        \"includes\": [\"eventTime\", \"recipientAccountId\",\"eventSource\", \"eventName\", \"requestParameters\"]},\n    \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"DeactivateMFADevice\"\n          }\n        }\n      ],\n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"iam.amazonaws.com\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-25T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\": 100\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1595927298"
+            }, 
+            "Rule_Condition": {
+                "S": "{\n    \"matches\": []\n}"
+            }, 
+            "Description": {
+                "S": "Event of high severity.  Verify legitimacy."
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "RuleId": {
+                "S": "Modified IAM Policy"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleType": {
+                "S": "Event anomaly"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "AlertText": {
+                "S": "Created or modified IAM policy in production account. "
+            }, 
+            "Query": {
+                "S": "{\n  \"size\": 100,\n  \"_source\": {\n        \"includes\": [\"eventTime\", \"eventName\", \"userIdentity.sessionContext.sessionIssuer.arn\", \"recipientAccountId\",\"eventSource\", \"userIdentity.accountId\", \"userIdentity.principalId\"]},\n  \"query\": {\n    \"bool\": {\n      \"must\": [],\n      \"filter\": [\n        {\"term\": {\"eventName.keyword\":\"CreatePolicyVersion\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"051687089423\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-26T08:00:00.000Z\" }}}\n      ],\n      \"should\": [],\n      \"must_not\": []\n    }\n  }\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1596273904"
+            }, 
+            "RuleType": {
+                "S": "User activity anomaly"
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "5"
+            }, 
+            "AlertText": {
+                "S": "Access denied event occured in production account 12345678:\nThe following users caused more than 3 access denied within 5 minutes in any service. "
+            }, 
+            "RuleId": {
+                "S": "Access Denied in Production"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "3"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "Query": {
+                "S": "{\n    \"query\": {\n    \"bool\": {\n      \"must\": [{\"match\":{\"errorCode.keyword\":\"AccessDenied\"}}],\n      \"filter\": [\n        {\"term\": {\"recipientAccountId.keyword\":\"051687089423\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-20T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.arn.keyword\"\n          }\n        }\n    }\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "5"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }, 
+            "Description": {
+                "S": "Search for errorCode=accessDenied in CloudTrail logs for the listed users"
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1595927298"
+            }, 
+            "Rule_Condition": {
+                "S": "{\n    \"matches\": []\n}"
+            }, 
+            "Description": {
+                "S": "Verify if IAM user should have programmatic access keys."
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "RuleId": {
+                "S": "Create Programmatic Access Key"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleType": {
+                "S": "Event anomaly"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "AlertText": {
+                "S": "New IAM programmatic access key created in account 987654321. "
+            }, 
+            "Query": {
+                "S": "{\n    \"_source\": {\n        \"includes\": [\"eventTime\", \"recipientAccountId\",\"eventSource\", \"eventName\", \"requestParameters\"]},\n    \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"CreateAccessKey\"\n          }\n        }\n      ],\n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"iam.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-25T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\": 100\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1596439505"
+            }, 
+            "RuleType": {
+                "S": "User activity anomaly"
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "AlertText": {
+                "S": "New user created S3 bucket in production account.  "
+            }, 
+            "RuleId": {
+                "S": "New user created S3 bucket"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleActive": {
+                "BOOL": false
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "Query": {
+                "S": "{\n    \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"CreateBucket\"\n          }\n        }\n      ],\n      \n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"s3.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-25T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.arn.keyword\"\n          }\n        }\n    }\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }, 
+            "Description": {
+                "S": "New userIdentity.arn used for filter eventSource:s3.amazonaws.com & eventName:CreateBucket & recipientAccountId:86182869689 for the first time within the alert window."
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1596271806"
+            }, 
+            "RuleType": {
+                "S": "User activity anomaly"
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "5"
+            }, 
+            "AlertText": {
+                "S": "User reached signin failure threshold in account 12345678:\nThe following users caused more than 3 login failures within 5 minutes. "
+            }, 
+            "RuleId": {
+                "S": "Failed user authentication"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "3"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "Query": {
+                "S": "{\n    \"query\": {\n    \"bool\": {\n      \"must\": [{\"wildcard\":{\"responseElements.keyword\":\"*Failure*\"}}],\n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"signin.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"987654321\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-20T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.userName.keyword\"\n          }\n        }\n    }\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }, 
+            "Description": {
+                "S": "Search for users that created signin.amazonaws.com events matching responseElements = {'ConsoleLogin': 'Failure'} or responseElements = {'SwitchRole': 'Failure'} "
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1596439507"
+            }, 
+            "RuleType": {
+                "S": "User activity anomaly"
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "AlertText": {
+                "S": "New or infrequent use of IAM access keys in production account 87654321:\nThe following IAM access keys where used for S3 create events for the first time within the alert window. "
+            }, 
+            "RuleId": {
+                "S": "Test"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleActive": {
+                "BOOL": false
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "Query": {
+                "S": "{\n    \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"Create*\"\n          }\n        }\n      ],\n      \n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"s3.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-25T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.accessKeyId.keyword\"\n          }\n        }\n    }\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }, 
+            "Description": {
+                "S": "Search for all accessKeys who performed S3 create events in the last n minutes (IntervallMinutes). Alert if accessKey hasn't been used for this operation within the last n hours (AlertPeriodMinutes). Search in index for 'userIdentity.accessKeyId', eventSource=s3.amazonaws.com, eventName=Create*"
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1595927298"
+            }, 
+            "Rule_Condition": {
+                "S": "{\n    \"matches\": [{\n        \"search_field\" : \"requestParameters\",\n        \"search_regex\" : \".*\\\"add\\\"*.\",\n        \"search_logic\" : \"True\"\n    },{\n        \"search_field\" : \"requestParameters\",\n        \"search_regex\" : \".*CREATE_VOLUME_PERMISSION.*\",\n        \"search_logic\" : \"True\"\n    }]\n}"
+            }, 
+            "Description": {
+                "S": "Snapshots in production account should not be shared."
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "RuleId": {
+                "S": "EBS snapshort public sharing"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleType": {
+                "S": "Event anomaly"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "AlertText": {
+                "S": "A EBS snapshot has been shared publicly in the production account. "
+            }, 
+            "Query": {
+                "S": "{\n    \"_source\": {\n        \"includes\": [\"eventTime\", \"recipientAccountId\",\"eventSource\", \"eventName\", \"requestParameters\"]},\n    \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"ModifySnapshotAttribute\"\n          }\n        }\n      ],\n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"ec2.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-25T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\": 100\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1596271806"
+            }, 
+            "RuleType": {
+                "S": "User activity anomaly"
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "5"
+            }, 
+            "AlertText": {
+                "S": "User reached failed assume role threshold in account 12345678:\nThe following users caused more than 3 login failures within 5 minutes. "
+            }, 
+            "RuleId": {
+                "S": "Failed Assume Role"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "3"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "Query": {
+                "S": "{\n    \"query\": {\n    \"bool\": {\n      \"must\": [{\"wildcard\":{\"eventName.keyword\":\"AssumeRole*\"}},\n            {\"match\":{\"errorCode.keyword\":\"AccessDenied\"}}\n      ],\n      \"filter\": [\n        {\"term\": {\"recipientAccountId.keyword\":\"963070018902\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-31T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.arn.keyword\"\n          }\n        }\n    }\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }, 
+            "Description": {
+                "S": "Search for users that created sts.amazonaws.com events matching errorCode=AccessDenied and eventName=AssumeRole|AssumeRoleWithSAML|AssumeRoleWithWebIdentity "
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1595927298"
+            }, 
+            "Rule_Condition": {
+                "S": "{\n    \"matches\": []\n}"
+            }, 
+            "Description": {
+                "S": "Bucket policy change eventName:PutBucketAcl|PutBucketPolicy|DeleteBucketPolicy , eventSource:s3.amazonaws.com has occured"
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "RuleId": {
+                "S": "Bucket policy modification"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleType": {
+                "S": "Event anomaly"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "AlertText": {
+                "S": "A bucket policy has been changed in the production account. "
+            }, 
+            "Query": {
+                "S": "{\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n   \n        {\n          \"bool\": {\n            \"should\": [\n              {\n                \"bool\": {\n                  \"should\": [\n                    {\n                      \"match\": {\n                        \"eventName\": \"PutBucketAcl\"\n                      }\n                    }\n                  ],\n                  \"minimum_should_match\": 1\n                }\n              },\n              {\n                \"bool\": {\n                  \"should\": [\n                    {\n                      \"bool\": {\n                        \"should\": [\n                          {\n                            \"match\": {\n                              \"eventName\": \"PutBucketPolicy\"\n                            }\n                          }\n                        ],\n                        \"minimum_should_match\": 1\n                      }\n                    },\n                    {\n                      \"bool\": {\n                        \"should\": [\n                          {\n                            \"match\": {\n                              \"eventName\": \"DeleteBucketPolicy\"\n                            }\n                          }\n                        ],\n                        \"minimum_should_match\": 1\n                      }\n                    }\n                  ],\n                  \"minimum_should_match\": 1\n                }\n              }\n            ],\n            \"minimum_should_match\": 1\n          }\n        },\n        \n\n        {\"term\": {\"eventSource.keyword\":\"iam.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-25T08:00:00.000Z\" }}}\n        \n      ]\n    }\n  }\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1596271807"
+            }, 
+            "RuleType": {
+                "S": "User activity anomaly"
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "AlertText": {
+                "S": "New or infrequent launch EC2 instance event by user in production account:\nThe following IAM users where used for EC2 launch events for the first time within the alert window. "
+            }, 
+            "RuleId": {
+                "S": "New users launching EC2 instance"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "Query": {
+                "S": "{\n    \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"RunInstances\"\n          }\n        }\n      ],\n      \n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"ec2.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-25T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.arn.keyword\"\n          }\n        }\n    }\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }, 
+            "Description": {
+                "S": "Search for all userIdentity.arn who performed EC2 create events in the last n minutes (IntervallMinutes). Alert if accessKey hasn't been used for this operation within the last n hours (AlertPeriodMinutes)."
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1596273904"
+            }, 
+            "RuleType": {
+                "S": "User activity anomaly"
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "5"
+            }, 
+            "AlertText": {
+                "S": "Unauthorized operation event occured in production account 12345678:\nThe following users caused at least 1 unauthorized error within 5 minutes in any service. "
+            }, 
+            "RuleId": {
+                "S": "Unauthorized Operation in Production"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "3"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "Query": {
+                "S": "{\n    \"query\": {\n    \"bool\": {\n      \"must\": [{\"match\":{\"errorCode.keyword\":\"UnauthorizedOperation\"}}],\n      \"filter\": [\n        {\"term\": {\"recipientAccountId.keyword\":\"051687089423\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-20T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\":0,\n  \"aggs\": {\n    \"my_count\": {\n      \"terms\": {\n        \"field\": \"userIdentity.arn.keyword\"\n          }\n        }\n    }\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "5"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }, 
+            "Description": {
+                "S": "Search for errorCode=UnauthorizedOperation in CloudTrail logs for the listed users"
+            }
+        }, 
+        {
+            "LastRun": {
+                "N": "1595927298"
+            }, 
+            "Rule_Condition": {
+                "S": "{\n    \"matches\": []\n}"
+            }, 
+            "Description": {
+                "S": "Verify if IAM user creation event is legit. Only federated users should be allowed in the environment."
+            }, 
+            "AlertPeriodMinutes": {
+                "N": "3600"
+            }, 
+            "RuleId": {
+                "S": "Create IAM user"
+            }, 
+            "AlertMinimumEventCount": {
+                "N": "1"
+            }, 
+            "RuleType": {
+                "S": "Event anomaly"
+            }, 
+            "RuleActive": {
+                "BOOL": true
+            }, 
+            "ES_Index": {
+                "S": "cloudtrail*"
+            }, 
+            "AlertText": {
+                "S": "New IAM user created:\nThe following IAM users where created. "
+            }, 
+            "Query": {
+                "S": "{\n    \"_source\": {\n        \"includes\": [\"eventTime\", \"recipientAccountId\",\"eventSource\", \"eventName\", \"requestParameters\"]},\n    \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"wildcard\": {\n            \"eventName.keyword\": \"CreateUser\"\n          }\n        }\n      ],\n      \"filter\": [\n        {\"term\": {\"eventSource.keyword\":\"iam.amazonaws.com\"}},\n        {\"term\": {\"recipientAccountId.keyword\":\"861828696892\"}},\n        { \"range\": { \"eventTime\": { \"gte\": \"2020-07-25T08:00:00.000Z\" }}}\n      ] \n    }\n  },\n  \"size\": 100\n}"
+            }, 
+            "RunScheduleInMinutes": {
+                "N": "60"
+            }, 
+            "LastAggResult": {
+                "M": {}
+            }
+        }
+    ], 
+    "ScannedCount": 15, 
+    "ConsumedCapacity": null
+}

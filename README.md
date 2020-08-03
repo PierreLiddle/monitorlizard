@@ -58,6 +58,7 @@ Monitor Lizard supports multiple use cases (see below). Each use case can run mu
 ### Tip
 Develop operating practices that help you to easier distinguish good from bad events. E.g. by the use of tagging, a clear separation between different account types (prod, test, dev), controlled deployment practices etc.
 
+
 ### [Use Case 1: User activity anomaly](https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase1)
 Find users or IP addresses that have performed actions for the first time within n minutes.
 Find users that performed an action more then n times within n minutes.
@@ -69,7 +70,17 @@ Examples:
 2. Alert on users that have created a S3 bucket or used DynamoDB in the production account for the first time
 3. More than 3 user signin failures within 5 minutes (sign in or assume role)
 
+Rule Set:
 
+Rule Id	|	Rule Type	|	Description
+----|	----	|----	
+Access Denied in Production	|	User activity anomaly	|	Access denied event occured in production account 12345678: The following users caused more than 3 access denied within 5 minutes in any service.
+New user created S3 bucket	|	User activity anomaly	|	New user created S3 bucket in production account.
+Failed user authentication	|	User activity anomaly	|	User reached signin failure threshold in account 12345678: The following users caused more than 3 login failures within 5 minutes.
+Failed authentications from IP	|	User activity anomaly	|	Source IP reached signin failure threshold (any account).
+Failed Assume Role	|	User activity anomaly	|	User reached failed assume role threshold in account 12345678: The following users caused more than 3 login failures within 5 minutes.
+New users launching EC2 instance	|	User activity anomaly	|	New or infrequent launch EC2 instance event by user in production account: The following IAM users where used for EC2 launch events for the first time within the alert window.
+Unauthorized Operation in Production	|	User activity anomaly	|	Unauthorized operation event occured in production account 12345678: The following users caused at least 1 unauthorized error within 5 minutes in any service.
 
 
 ### [Use Case 2: Event anomaly] (https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase2)
@@ -81,21 +92,48 @@ Examples:
 2. Find EC2 RunInstances events with a specific Tag missing
 3. Find launch EC2 instance events within the production account not performed by a specific role
 
+Rule Set:
+
+Rule Id	|	Rule Type	|	Description
+----|	----	|----	
+IAM role created	|	Event anomaly	|	Created IAM role in production account.
+Create IAM user without tag	|	Event anomaly	|	New IAM user created without tag: The following IAM users where created.
+MFA deactivated	|	Event anomaly	|	An MFA device has been deactivated and its association has been removed from a user.
+Modified IAM Policy	|	Event anomaly	|	Created or modified IAM policy in production account.
+Create Programmatic Access Key	|	Event anomaly	|	New IAM programmatic access key created in account 987654321.
+EBS snapshort public sharing	|	Event anomaly	|	A EBS snapshot has been shared publicly in the production account.
+Bucket policy modification	|	Event anomaly	|	A bucket policy has been changed in the production account.
+Modified SG ingress	|	Event anomaly	|	The ingress policy of a specific security group belonging to a sensitive workload has been changed.
+Create IAM user	|	Event anomaly	|	New IAM user created: The following IAM users where created.
 
 
-## Backlog
 
-### Use Case #3: “Event correlation”
+### [Use Case 3: Login anomaly] (https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase3)
+Find different login anomalies indicating either brute force or password spray attacks.
 
-User that executes multiple commands within time window such as (
+Examples:
 
-* Change bucket policy and delete bucket (for same bucket)
-* CreateUser and CreateAccessKey (for same user)
+1. User logs in from different IPs/countries/cities within short time period
+2. Multiple users try to login from same IP within short time period
+
+Rule Set:
+
+Rule Id	|	Rule Type	|	Description
+----|	----	|----	
+Multiple users from same IP	|	Login anomaly	|	Multiple users logged in from same IP within time window
+Logins from multiple cities	|	Login anomaly	|	User logged in from different cities within same time window
+Logins from multiple countries	|	Login anomaly	|	(optional) User logged in from different countries within same time window
+Logins from multiple IPs	|	Login anomaly	|	(optional) User logged in from different IPs within same time window
 
 
 
-### Use Case #4:“User activity anomaly v2”
-Find first occurrence of user activity but alert only if a particular field value is seen for the first time.
 
-Example 1: User logs in from country he/she hasn’t logged in before (last x days)
-Example 2: User assumes role for the first time he/she hasn't used before 
+## How to craft Elasticsearch DLS queries
+
+### Using Kibana
+
+Create your search in Kibana using filters and KQL search expression. Run query. 
+
+Select Inspect and copy the Request into a text editor.
+
+Extract the Query part and test in Kibana Dev tools.

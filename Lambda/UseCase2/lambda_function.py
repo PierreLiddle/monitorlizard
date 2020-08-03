@@ -48,11 +48,13 @@ from datetime import datetime
 DEBUG = True                    # Default: False
 TEST_SNS = False                # no execution of any rule, just send a sinple test message,  Default: False
 SEND_ALERT = True              # Send or send not SNS alrert message and add document to index MonitorLizardAlerts,  Default: True
-TEST_RULE = "Create Programmatic Access Key"   # Execute only rule with this rule Id. Ignore LastRun settings, Default ""
+TEST_RULE = ""                  # Execute only rule with this rule Id. Ignore LastRun settings, Default ""
 TEST_NOUPDATE = False           # Don't update LastAggResult in DynamoDB, Default: False
-TEST_AlertPeriod = 999999            # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool, Default: 0
-TEST_IGNORE_LASTRUN = True     # Run regardless of recent execution,  Default: False
+TEST_AlertPeriod = 0            # Extend alert AlertPeriodMinutes by more minutes for test runs covering a wider data pool, Default: 0
+TEST_IGNORE_LASTRUN = False     # Run regardless of recent execution,  Default: False
 
+# Set rule type
+RuleType = "Event anomaly"
 
 
 # Read Environment Variables
@@ -380,8 +382,8 @@ def lambda_handler(event, context):
     # Execute rules of type "User activity anomaly"
     #
     
-    RuleType = "Event anomaly"
-
+    consoleLog("Executing rule type "+RuleType,"INFO",esLogLevelGv) 
+    
     response = dynamodb_table.scan(
         FilterExpression=Attr('RuleType').eq(RuleType)
     )
@@ -396,7 +398,7 @@ def lambda_handler(event, context):
     for Rule in response["Items"]:
         print()
         
-        if Rule["RuleActive"]:
+        if not Rule["RuleActive"]:
             print( "Skipping SIEM rule because rule has been deactivated (RuleActive=false)" )
             continue
             
