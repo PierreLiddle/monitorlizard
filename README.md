@@ -5,21 +5,21 @@
 Cloud native event detection engine for AWS logs stored in Elasticsearch
 
 ## What is it?
-Monitor Lizard runs ontop of the Elasticsearch [securty data lalke](https://github.com/awsvolks/securitydatalake) solution and performs customized event correlation within AWS native logs using AWS native solutions such as AWS Lambda, Amazon DynamoDB, AWS SNS and the Amazon Elasticsearch service for the purpose of threat and anomaly detection.
+Monitor Lizard runs ontop of the Elasticsearch [securty data lalke](https://github.com/awsvolks/securitydatalake) solution and performs customized event correlation for any type of logs using AWS native solutions such as AWS Lambda, Amazon DynamoDB, AWS SNS and the Amazon Elasticsearch service for the purpose of threat and anomaly detection.
 
-The main idea behind this solution is to find events that look legit but are suspicious. These events are called "known unknowns" by security analysts and are typically used for malwareless "living of the land" attacks. 
+The idea behind this solution is to find malicious events within AWS native log sources or events that have been triggered by deployed decoy services acting as honeypots. 
 
 Examples:
 
 1. Many EC2 instances are launched within the production account either by the role that is used by the deployment pipeline or by AWS as part of an autoscaling event. It is suspicious if user Bob would launch an EC2 instance manually for the first time even if it would be perfectly fine if Bob manually launches instances in the test/dev account. 
 
-2. Another example includes the creation of AWS services and users with a malicious intent. Attackers typically don't apply all tags to EC2 instances because they don't want them to show up in a particular billing category. So instances without a billing related tag are suspicious. 
+2. User launches new AWS services with a malicious intent. Attackers typically don't apply tags to EC2 instances because they don't want them to show up in a particular billing category. Therefore, launched instances without a billing related tag are suspicious. 
 
-3. New IAM users with programmatic access keys should be monitored in any way. Create user events and create access key events are two different events in CloudTrail. Both need to considered in combination.
+3. New IAM users with programmatic access keys should be verified especially in environments that use a federated identity provider.
 
 4. For static and very sensitive environments, all create, modify and delete events (eventName:Create\*, Update\*, Delete\*, Stop\*) can be monitored.
 
-Another use case could be the detection of triggers originating from decoys services used as a deception mechanism. 
+5. Another use case could be the detection of triggers originating from decoys services used as a deception mechanism. 
 
 Monitor Lizard can send SNS messages and adds a new document into an Elasticsearch index each time a rule fires.
 
