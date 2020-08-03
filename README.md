@@ -28,29 +28,28 @@ Amazon GuardDuty is a threat detection soluton that utilizes AWS native logs and
 
 
 ## What is it not?
-The security data lake solution in combination with Monitor Lizard provides some correlation features that are typically provided by SIEM solutions but Monitor Lizard. SIEMs are more feature rich and do also utilise threat intelligence to find malicious activities. SIEMs are also geared to consume a large amount of different log types accross the solution stack.
+The security data lake solution in combination with Monitor Lizard provides some correlation features that are typically provided by SIEM solutions. The intention behind Monitor Lizard is not to build another SIEM solution but to provide basic event correlation capabilities for AWS native logs if no SIEM is available.
 
-The intention behind Monitor Lizard is not to build another SIEM solution but to provide basic event correlation capabilities for AWS native logs if no SIEM is available.
+SIEMs are powerful and feature rich event management solutions and typically utilise threat intelligence to find malicious activities. SIEMs are also geared to consume a large amount of different log types accross the solution stack.
+
 
 
 
 ## Why did we build it?
 ### Customer struggle with SIEMs 
-Organisations struggle with making use out of AWS native logs within SIEMs due to the complex structure (hard to write rules) and the size (commercially difficult to ingest the huge amounts of log data into the SIEM)
-SIEMs don't come with a set of canned rules to detect threats within CloudTrail. Many organisations to not have the resources to develop a good threat detection capability with SIEMs because the work that needs to be done to ingest the highly nested JSON logs into a particular SIEM format, the knowledge of what to look for in CloudTrail and the investment to get it done.
-Monitor Lizard can be deployed quickly and provides a good baseline capability without large investments. 
+Organisations sometimes struggle to integrate AWS native logs into SIEMs because of technical or commercial issues. Cloud native logs have a complex data structure and generate a large amounts of logs. 
+
+Most SIEMs or even managed security service providers don't come with a predefined set of rules that detect threats within AWS cloud native log sources and developing these rule sets is often challenging due to the lack of resources or experience.
+
+Monitor Lizard can be deployed quickly and provides a good baseline capability in a short time without big investments.  
 
 
 ### ELK struggles with correlation
-The ELK Stack does not come with built-in correlation rules or advanced correlation capabilities, and so it is up to the analyst to use Kibana queries, based on the parsing and processing performed using Logstash, to correlate between events. This is a manual task and ELK is not designed to perform automated log correlation. 
-
-
-### What is log correlation?
-Log correlation compares different events rather than just checking for details within a single event. The most prominent and simple example are multiple failed login events originating from the same IP address.
+The ELK stack is great for interactive log analytics. The alerting feature is good, but not designed to run complex correlation rules or custom use cases. By using Monitor Lizard ontop of Elasticsearch, organisations have the ability to develop any kind of custom use case, alerting and automation capabilities. 
 
 
 
-## Use cases
+## Monitor Lizard Use Cases
 
 ### Use cases and rules
 Monitor Lizard supports multiple use cases (see below). Each use case can run multiple rules or configuration sets. E.g. the use case "Find single event" can have a rule that finds suspicious EC2 events and another rule that looks for suspicious IAM events.
