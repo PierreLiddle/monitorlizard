@@ -83,7 +83,7 @@ New users launching EC2 instance	|	User activity anomaly	|	New or infrequent lau
 Unauthorized Operation in Production	|	User activity anomaly	|	Unauthorized operation event occured in production account 12345678: The following users caused at least 1 unauthorized error within 5 minutes in any service.
 
 
-### [Use Case 2: Event anomaly] (https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase2)
+### [Use Case 2: Event anomaly](https://github.com/awsvolks/monitorlizard/tree/master/Lambda/UseCase2)
 
 Find events that include or do not include certain values (regex) within log fields. A rule can define multiple `find` or `missing` conditions.
 
